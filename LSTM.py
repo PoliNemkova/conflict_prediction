@@ -117,6 +117,12 @@ y_val = split_val_df[target_col]
 X_test = split_test_df.drop([target_col, "_automl_split_col_0000"], axis=1)
 y_test = split_test_df[target_col]
 
+
+
+# COMMAND ----------
+
+X_train.shape
+
 # COMMAND ----------
 
 # AutoML balanced the data internally and use _automl_sample_weight_0000 to calibrate the probability distribution
@@ -124,6 +130,46 @@ sample_weight = X_train.loc[:, "_automl_sample_weight_0000"].to_numpy()
 X_train = X_train.drop(["_automl_sample_weight_0000"], axis=1)
 X_val = X_val.drop(["_automl_sample_weight_0000"], axis=1)
 X_test = X_test.drop(["_automl_sample_weight_0000"], axis=1)
+
+# COMMAND ----------
+
+# reshaping input for LSTM
+
+data = X_train
+windowSize=4
+featuresPerWindow=227
+X_train_3d=np.zeros((len(data)-windowSize, windowSize ,featuresPerWindow))
+for i in range(len(data)-windowSize):
+    for j in range(windowSize):
+        for k in range(featuresPerWindow):
+            X_train_3d[i,j,k]=data.iloc[i+j,k]
+
+data = X_val
+windowSize=4
+featuresPerWindow=227
+X_val_3d=np.zeros((len(data)-windowSize, windowSize ,featuresPerWindow))
+for i in range(len(data)-windowSize):
+    for j in range(windowSize):
+        for k in range(featuresPerWindow):
+            X_val_3d[i,j,k]=data.iloc[i+j,k]
+
+data = X_test
+windowSize=4
+featuresPerWindow=227
+X_test_3d=np.zeros((len(data)-windowSize, windowSize ,featuresPerWindow))
+for i in range(len(data)-windowSize):
+    for j in range(windowSize):
+        for k in range(featuresPerWindow):
+            X_test_3d[i,j,k]=data.iloc[i+j,k]
+
+
+# COMMAND ----------
+
+X_train_3d.shape
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 
@@ -136,10 +182,6 @@ pip install tensorflow
 # COMMAND ----------
 
 dbutils.library.restartPython()
-
-# COMMAND ----------
-
-INPUT_DIM = X_train.shape[1]
 
 # COMMAND ----------
 
@@ -189,8 +231,8 @@ X_val_processed = pipeline_val.transform(X_val)
 def create_model(layer_choice, units0, units1, dropout1, activation, theoptimizer):
     model = Sequential()
     # input layer
-    model.add(LSTM(64, input_shape=(None, 4, 2072), return_sequences=True))
-    model.add(TimeDistributed(Dense(2072)))
+    model.add(LSTM(64, input_shape=(None, 4, 227), return_sequences=False))
+    #model.add(TimeDistributed(Dense(227)))
     model.add(Dense(int(units0), input_dim=INPUT_DIM, activation=activation))
     # hidden layers #
     model.add(Dense(int(units1), activation=activation))
@@ -209,6 +251,13 @@ def create_model(layer_choice, units0, units1, dropout1, activation, theoptimize
     model.add(Dense(1, activation="sigmoid"))
     model.compile(loss='binary_crossentropy', optimizer=theoptimizer, metrics=[tf.keras.metrics.Precision(), tf.keras.metrics.Recall()])
     return model
+
+# COMMAND ----------
+
+X_train = X_test_3d
+X_val = X_val_3d
+X_test = X_test_3d
+INPUT_DIM = X_train.shape[2]
 
 # COMMAND ----------
 
@@ -325,6 +374,10 @@ display(
 
 set_config(display="diagram")
 model
+
+# COMMAND ----------
+
+
 
 # COMMAND ----------
 
