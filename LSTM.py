@@ -169,10 +169,6 @@ X_train_3d.shape
 
 # COMMAND ----------
 
-
-
-# COMMAND ----------
-
 pip install tensorflow
 
 # COMMAND ----------
